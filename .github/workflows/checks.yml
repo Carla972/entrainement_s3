@@ -1,0 +1,40 @@
+name: Map checks and delivery
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.11.16"
+          python-version: "3.12"
+      - name: Install locked dependencies
+        run: uv sync --locked
+      - name: Run the tests
+        run: uv run python -m pytest - q
+
+  package:
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Build the archive for this commit
+        run: python package.py
+      - uses: actions/upload-artifact@v7
+        with:
+          name: map-kit-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 7
